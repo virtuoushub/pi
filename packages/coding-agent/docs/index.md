@@ -72,6 +72,7 @@ For the full first-run flow, see [Quickstart](quickstart.md).
 - [Windows](windows.md)
 - [Termux on Android](termux.md)
 - [tmux](tmux.md)
+- [Devcontainer / Codespaces](devcontainer.md)
 - [Terminal setup](terminal-setup.md)
 - [Shell aliases](shell-aliases.md)
 
