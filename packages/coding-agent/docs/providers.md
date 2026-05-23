@@ -5,6 +5,7 @@ Pi supports subscription-based providers via OAuth and API key providers via env
 ## Table of Contents
 
 - [Subscriptions](#subscriptions)
+- [Remote Environments](#remote-environments-codespaces-ssh-containers)
 - [API Keys](#api-keys)
 - [Auth File](#auth-file)
 - [Cloud Providers](#cloud-providers)
@@ -34,6 +35,38 @@ Anthropic subscription auth is active for Claude Pro/Max accounts. Third-party h
 
 - Press Enter for github.com, or enter your GitHub Enterprise Server domain
 - If you get "model not supported", enable it in VS Code: Copilot Chat → model selector → select model → "Enable"
+
+### Remote Environments (Codespaces, SSH, Containers)
+
+OAuth login for OpenAI Codex and Claude Pro/Max starts a local HTTP callback server (ports 1455 and 53692 respectively). After authenticating in your browser, the provider redirects to `http://localhost:<port>/...`. This works when pi runs on the same machine as the browser, but **fails in remote environments** where the browser's `localhost` does not reach the container or remote host.
+
+GitHub Copilot uses the [device code flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) instead and works everywhere without port forwarding.
+
+**Workarounds for OpenAI Codex and Claude Pro/Max:**
+
+1. **Paste the redirect URL.** When the callback server cannot be reached, the login dialog shows a text input. Complete authentication in the browser, then copy the final redirect URL from the browser's address bar (it will show an error page) and paste it into the input. Pi extracts the authorization code from the URL.
+
+2. **Forward the callback ports.** Forward ports 1455 (OpenAI) and/or 53692 (Anthropic) from the remote host to your local machine so the browser redirect reaches the callback server:
+   ```bash
+   # SSH
+   ssh -L 1455:localhost:1455 -L 53692:localhost:53692 remote-host
+
+   # GitHub Codespaces (via gh CLI)
+   gh codespace ssh -c <codespace-name> -- -L 1455:localhost:1455 -L 53692:localhost:53692 -N
+   ```
+
+3. **Copy `auth.json` from a local machine.** Run `/login` locally where the browser redirect works, then copy the credentials:
+   ```bash
+   # GitHub Codespaces
+   gh codespace cp ~/.pi/agent/auth.json remote:~/.pi/agent/auth.json -c <codespace-name>
+
+   # SSH / scp
+   scp ~/.pi/agent/auth.json remote-host:~/.pi/agent/auth.json
+   ```
+
+4. **Use API keys instead of OAuth.** Set `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` as environment variables (or Codespace secrets) to bypass OAuth entirely. See [API Keys](#api-keys) below.
+
+5. **Bind the callback server to `0.0.0.0`.** Set `PI_OAUTH_CALLBACK_HOST=0.0.0.0` to listen on all interfaces. This is useful when the Codespace or container already has automatic port forwarding configured (e.g., VS Code Remote with `forwardPorts`), but the server's default bind to `127.0.0.1` prevents the forwarded connection from reaching it.
 
 ## API Keys
 
